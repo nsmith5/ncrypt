@@ -1,5 +1,7 @@
 # `ncrypt` |  simple file encryption CLI
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/nsmith5/ncrypt)](https://goreportcard.com/report/github.com/nsmith5/ncrypt)
+
 > NB: You probably _shouldn't_ use this! Go find you a battle tested
 > encryption CLI. I'm sure its out there somewhere.
 
@@ -49,4 +51,5 @@ libraries for command line users.
 ## Whats with the name?
 
 n -> Nathan (me)
+
 crypt -> encrypt / decrypt
