@@ -20,20 +20,17 @@ const (
 	keylength = 32
 )
 
-var (
-	salt []byte = nil
-)
-
 // Encrypt input using argon2 and xchacha20poly1305
 func Encrypt(passwd, input []byte) ([]byte, error) {
-	key := argon2.IDKey(passwd, salt, time, memory, threads, keylength)
-	aead, err := chacha20poly1305.NewX(key)
-	if err != nil {
+	// Make salt / nonce!
+	nonce := make([]byte, chacha20poly1305.NonceSizeX, chacha20poly1305.NonceSizeX+len(input)+chacha20poly1305.Overhead)
+	if _, err := rand.Read(nonce); err != nil {
 		return nil, err
 	}
 
-	nonce := make([]byte, aead.NonceSize(), aead.NonceSize()+len(input)+aead.Overhead())
-	if _, err := rand.Read(nonce); err != nil {
+	key := argon2.IDKey(passwd, nonce, time, memory, threads, keylength)
+	aead, err := chacha20poly1305.NewX(key)
+	if err != nil {
 		return nil, err
 	}
 
@@ -42,18 +39,17 @@ func Encrypt(passwd, input []byte) ([]byte, error) {
 
 // Decrypt input using argon2 and xchacha20poly1305
 func Decrypt(passwd, input []byte) ([]byte, error) {
-	key := argon2.IDKey(passwd, salt, time, memory, threads, keylength)
+	if len(input) < chacha20poly1305.NonceSizeX {
+		return nil, errors.New(`ciphertext too short`)
+	}
+
+	nonce, ciphertext := input[:chacha20poly1305.NonceSizeX], input[chacha20poly1305.NonceSizeX:]
+
+	key := argon2.IDKey(passwd, nonce, time, memory, threads, keylength)
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err
 	}
-
-	if len(input) < aead.NonceSize() {
-		return nil, errors.New(`ciphertext too short`)
-	}
-
-	// Split nonce and ciphertext.
-	nonce, ciphertext := input[:aead.NonceSize()], input[aead.NonceSize():]
 
 	// Decrypt the message and check it wasn't tampered with.
 	return aead.Open(nil, nonce, ciphertext, nil)
